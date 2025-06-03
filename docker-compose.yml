@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+ organization_catalog-db:
+    image: postgres:16.2
+    ports:
+      - "5432:5432"
+    volumes:
+      - organization_catalog-db-data:/var/lib/postgresql/data/pgdata
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_SERVER=organization_catalog-db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=organization_catalog
+    restart: always
+    networks:
+      - shared_network
+
+ organization_catalog:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    depends_on:
+      - organization_catalog-db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/src
+    environment:
+      - DATABASE_DSN=postgresql://postgres:password@organization_catalog-db:5432/organization_catalog
+      - BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:5000"]
+    command: sh -c "alembic upgrade head && uvicorn --host 0.0.0.0 --port 8000 src.main:app"
+    restart: always
+    networks:
+      - shared_network
+
+networks:
+  shared_network:
+    driver: bridge
+
+volumes:
+  organization_catalog-db-data:
